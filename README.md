@@ -1,103 +1,121 @@
-# PINNs — Problema Inverso de Parámetros
-### Proyecto Final · Análisis Numérico de Ecuaciones Diferenciales
+# PINNs — Problema Inverso de Parámetros para la Ecuación de Difusión 1D
 
-> **Pista B:** Recuperación del coeficiente de difusividad λ en la ecuación de difusión 1D a partir de observaciones dispersas y ruidosas, usando Physics-Informed Neural Networks (PINNs).
+![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
+![TensorFlow](https://img.shields.io/badge/TensorFlow-2.10+-orange.svg)
+![License](https://img.shields.io/badge/License-MIT-green.svg)
 
----
-
-## Descripción
-
-Este proyecto implementa una PINN para resolver el **problema inverso de parámetros** en la ecuación de difusión unidimensional:
-
-$$u_t = \lambda \, u_{xx}, \qquad (x,t) \in [0,1]^2$$
-
-con condición inicial $u(x,0) = \sin(\pi x)$ y condiciones de contorno Dirichlet homogéneas. El coeficiente $\lambda > 0$ es **desconocido** y se recupera conjuntamente con el campo $u(x,t)$ a partir de $N_d = 100$ observaciones con 1% de ruido gaussiano.
-
-**Resultado principal:** error relativo en $\hat{\lambda}$ de **0.17%** tras 8000 épocas de entrenamiento.
+> **Proyecto Final** · Asignatura: Análisis Numérico de Ecuaciones Diferenciales  
+> **Pista B:** Recuperación del coeficiente de difusividad \(\lambda\) desconocido mediante **Physics-Informed Neural Networks (PINNs)**.
 
 ---
 
-## Contenido del repositorio
+## 🚀 Resultado Principal
 
-| Archivo | Descripción |
-|---|---|
-| `pinn_1d_diffusion_inverse.ipynb` | Notebook principal — problema directo, inverso, validación y estudio de sensibilidad |
-| `Proyecto_Final_PINNs_PistaB.pdf` | Informe completo del proyecto |
-| `Proyecto_Final_PINNs_PistaB.tex` | Código fuente LaTeX del informe |
-| `LICENSE` | Licencia del repositorio |
+Se implementó una PINN capaz de **estimar el coeficiente de difusión \(\lambda\)** con un **error relativo de solo 0.17%** a partir de 100 observaciones ruidosas (1% de ruido gaussiano).
+
+![Evolución del parámetro estimado](figures/figura_06_evolucion_lambda.png.png)
 
 ---
 
-## Resultados
+## Descripción del Problema
 
-| Métrica | Valor |
-|---|---|
-| λ real | 0.10000 |
-| λ estimado | 0.10017 |
-| Error relativo en λ | **0.17%** |
-| Error L² del campo (prob. inverso) | 1.57×10⁻³ |
-| Error L² PINN vs analítica (prob. directo) | 1.47×10⁻³ |
+El objetivo es resolver el **problema inverso de parámetros** en la ecuación de difusión unidimensional:
 
----
+$$
+u_t = \lambda \, u_{xx}, \qquad (x,t) \in [0,1]^2
+$$
 
-## Método
+con condición inicial \(u(x,0) = \sin(\pi x)\) y condiciones de contorno Dirichlet homogéneas \(u(0,t) = u(1,t) = 0\).
 
-- **Red neuronal:** 3 capas ocultas × 40 neuronas, activación `tanh`, inicialización Glorot
-- **λ como variable entrenable:** `tf.Variable` optimizado conjuntamente con los pesos
-- **Función de pérdida:** residuo PDE + condición inicial + contorno + ajuste a datos
-- **Derivadas:** diferenciación automática con tapes anidados (`tf.GradientTape`)
-- **Optimizador:** Adam, η = 10⁻³, 8000 épocas
-- **Positividad:** proyección explícita λ ← max(λ, 10⁻⁶) tras cada paso
+La solución analítica es conocida:
+
+$$
+u(x,t) = \sin(\pi x) \, e^{-\lambda \pi^2 t}
+$$
+
+El desafío consiste en **recuperar simultáneamente** el campo \(u(x,t)\) y el parámetro desconocido \(\lambda > 0\) a partir de datos dispersos y ruidosos.
 
 ---
 
-## Validación
+## Estructura del Repositorio
 
-1. **Comparación con Crank-Nicolson** — el PINN supera en precisión al esquema clásico (error L² 1.47×10⁻³ vs 6.71×10⁻³)
-2. **Estudio de sensibilidad** — $N_d \in \{20, 50, 100, 200\}$, ruido $\in \{0\%, 1\%\}$, 3 semillas independientes; error en λ < 1% en los 24 experimentos
-3. **Plausibilidad física** — positividad de λ garantizada; señal de gradiente consistente durante todo el entrenamiento
+| Carpeta / Archivo                          | Descripción |
+|-------------------------------------------|-------------|
+| `pinn_1d_diffusion_inverse.ipynb`         | Notebook principal (problema directo + inverso + validación) |
+| `Informe/`                                | Informe técnico completo (PDF + código LaTeX) |
+| `figures/`                                | Figuras generadas durante el proyecto |
+| `LICENSE`                                 | Licencia MIT |
 
 ---
 
-## Requisitos
+## Metodología
+
+- **Arquitectura de la red**: 3 capas ocultas de 40 neuronas, activación `tanh`, inicialización Glorot.
+- **Parámetro entrenable**: \(\hat{\lambda}\) se define como `tf.Variable` y se optimiza junto con los pesos de la red.
+- **Función de pérdida**: Residuo de la PDE + Condición inicial + Condiciones de contorno + Ajuste a datos observados.
+- **Diferenciación automática**: Uso de *tapes anidados* (`tf.GradientTape`) para calcular derivadas de segundo orden.
+- **Optimizador**: Adam con \(\eta = 10^{-3}\) durante 8000 épocas.
+- **Restricción física**: Proyección explícita \(\hat{\lambda} \leftarrow \max(\hat{\lambda}, 10^{-6})\) para garantizar positividad.
+
+---
+
+## Validación y Resultados
+
+### 1. Precisión del parámetro estimado
+
+| Métrica                        | Valor          |
+|--------------------------------|----------------|
+| \(\lambda\) real               | 0.10000        |
+| \(\hat{\lambda}\) estimado     | **0.10017**    |
+| **Error relativo**             | **0.17%**      |
+| Error \(L^2\) del campo (inverso) | \(1.57 \times 10^{-3}\) |
+
+### 2. Comparación con método numérico clásico (Crank-Nicolson)
+
+El PINN **supera** al esquema de diferencias finitas en precisión:
+
+| Comparación              | Error \(L^2\) (Directo) | Error \(L^2\) (Inverso) |
+|--------------------------|--------------------------|--------------------------|
+| PINN vs Analítica        | \(1.47 \times 10^{-3}\)  | \(1.57 \times 10^{-3}\)  |
+| Crank-Nicolson vs Analítica | \(6.71 \times 10^{-3}\)  | \(6.74 \times 10^{-3}\)  |
+
+### 3. Estudio de sensibilidad
+
+Se evaluó el método con diferentes cantidades de datos (\(N_d \in \{20,50,100,200\}\)) y niveles de ruido (0% y 1%). En **todos los 24 experimentos** el error relativo en \(\hat{\lambda}\) se mantuvo **por debajo del 1%**.
+
+![Estudio de sensibilidad](figures/figura_11_sensibilidad_nd_ruido.png.png)
+
+---
+
+## Cómo Ejecutar el Proyecto
+
+### Opción recomendada: Google Colab
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/RawBud11/pinn-1d-diffusion-inverse/blob/main/pinn_1d_diffusion_inverse.ipynb)
+
+### Ejecución local
 
 ```bash
-python >= 3.8
+jupyter notebook pinn_1d_diffusion_inverse.ipynb
+Reproducibilidad: Se fijaron las semillas np.random.seed(7) y tf.random.set_seed(42).
+
+Requisitos
+Bashpython >= 3.8
 tensorflow >= 2.10
 numpy
 matplotlib
 scipy
-```
+Instalación rápida:
+Bashpip install tensorflow numpy matplotlib scipy
 
-Instalación:
-```bash
-pip install tensorflow numpy matplotlib scipy
-```
-
----
-
-## Ejecución
-
-El notebook está diseñado para ejecutarse de arriba a abajo en una sola sesión:
-
-```bash
-jupyter notebook pinn_1d_diffusion_inverse.ipynb
-```
-
-O directamente en **Google Colab** — todas las dependencias están disponibles por defecto.
-
-> **Semillas fijas:** `np.random.seed(7)` y `tf.random.set_seed(42)` garantizan reproducibilidad exacta.
-
----
-
-## Referencia principal
-
+Referencia Principal
 Raissi, M., Perdikaris, P., & Karniadakis, G. E. (2019).
-*Physics-informed neural networks: a deep learning framework for solving forward and inverse problems involving nonlinear partial differential equations.*
+Physics-informed neural networks: a deep learning framework for solving forward and inverse problems involving nonlinear partial differential equations.
 Journal of Computational Physics, 378, 686–707.
 
----
+Licencia
+Este proyecto está licenciado bajo la licencia MIT. Ver archivo LICENSE para más detalles.
 
-## Licencia
-
-Este proyecto está bajo la licencia especificada en el archivo `LICENSE`.
+Autores
+Valentina Ariztizabal Sierra
+Camilo Andrés Jaime Rojas
